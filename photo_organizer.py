@@ -3,6 +3,9 @@ from datetime import datetime
 import time
 import platform
 from PIL import Image
+import shutil
+from util import safe_name
+import pathlib
 
 default_config = {
     'SOURCE_FOLDER': 'teste/source',
@@ -10,7 +13,7 @@ default_config = {
     'OPERATION': 'MOVE'
 }
 
-image_formats = ('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif', 'heic')
+image_formats = ['.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif', '.heic']
 
 
 def get_config(key: str) -> str:
@@ -66,14 +69,38 @@ def destination_path(path):
     take_date = img_date(path)
     if take_date is None:
         return None
-    
+
     format_folder = take_date.strftime(F"%Y{os.sep}%m{os.sep}%d")
     base_name = os.path.basename(path)
+    dest_path = os.path.join(get_config(
+        'DESTINATION_FOLDER'), format_folder, base_name)
+    return safe_name(dest_path)
 
-    return os.path.join(get_config('DESTINATION_FOLDER'), format_folder , base_name)
+
+def is_image(name):
+    _, ext = os.path.splitext(name)
+    return ext in image_formats
+
+def process_image(image_path):
+    if not is_image(image_path):
+        return
+    new_path = destination_path(image_path)
+    if not new_path:
+        print(f'Could not determine new path for image {image_path}')
+        return
+    operation = get_config('OPERATION')
+    os.makedirs(os.path.dirname(new_path), exist_ok=True)
+    if operation == 'MOVE':
+        print(f'moving {image_path} to {new_path}...')
+        shutil.move(image_path, new_path)
+    elif operation == 'COPY':
+        print(f'copying {image_path} to {new_path}...')
+        shutil.copy(image_path, new_path)
+    else:
+        print(f'Please configure env OPERATION to perform operation...')
+
 
 if __name__ == '__main__':
     for root, _, files in os.walk(get_config('SOURCE_FOLDER')):
         for file in files:
-            file_path = os.path.join(root, file)
-            print(img_date(file_path))
+            process_image(os.path.join(root, file))
