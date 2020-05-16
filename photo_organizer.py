@@ -22,6 +22,7 @@ default_config = {
 }
 
 image_formats = ['.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif', '.heic']
+videos_formats = ['.mp4', '.wmv', '.avi']
 
 
 def get_config(key: str) -> str:
@@ -92,10 +93,19 @@ def is_image(name):
     _, ext = os.path.splitext(name)
     return ext.lower() in image_formats
 
+def is_video(name):
+    _, ext = os.path.splitext(name)
+    return ext.lower() in videos_formats
+
 def process_image(image_path):
     logging.info(f'processing file {image_path}')
-    if not is_image(image_path):
+    if is_video(image_path):
+        move_to_videos(image_path)
         return
+    if not is_image(image_path):
+        move_to_trash(image_path)
+        return
+    #process image moving
     try:
         new_path = destination_path(image_path)
     except UnidentifiedImageError as error:
@@ -118,10 +128,24 @@ def process_image(image_path):
 
 def move_to_error(image_path):
     base_name = os.path.basename(image_path)
-    dest_path = os.path.join(get_config('DESTINATION_FOLDER'), 'error', base_name)
+    dest_path = safe_name(os.path.join(get_config('DESTINATION_FOLDER'), 'error', base_name))
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     logging.info(f'moving {image_path} to ERROR {dest_path}...')
     shutil.move(image_path, dest_path)
+
+def move_to_videos(image_path):
+    base_name = os.path.basename(image_path)
+    dest_path = safe_name(os.path.join(get_config('DESTINATION_FOLDER'), 'videos', base_name))
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    logging.info(f'moving {image_path} to VIDEOS {dest_path}...')
+    shutil.move(image_path, dest_path)
+
+def move_to_trash(image_path):
+    base_name = os.path.basename(image_path)
+    dest_path = safe_name(os.path.join(get_config('DESTINATION_FOLDER'), 'trash', base_name))
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    logging.info(f'moving {image_path} to TRASH {dest_path}...')
+    shutil.move(image_path, dest_path)    
 
 def arg_parsers():
     # Initiate the parser
@@ -148,9 +172,9 @@ def update_config_with_args(args):
 def main():
     args = arg_parsers()
     if args.version:
-        print('photo organizer version 1.0.2')
+        print('photo organizer version 1.0.3')
         return
-    logging.info("Starting photo organizer V: 1.0.2")
+    logging.info("Starting photo organizer V: 1.0.3")
     update_config_with_args(args)
     for root, _, files in os.walk(get_config('SOURCE_FOLDER')):
         for file in files:
