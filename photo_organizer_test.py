@@ -1,7 +1,7 @@
 import os
 import pytest
 import datetime
-from photo_organizer import get_config, default_config, img_date, destination_path, is_image, process_image, fix_wrong_date
+from photo_organizer import get_config, default_config, img_date, destination_path, is_image, process_image
 import platform
 import shutil
 
