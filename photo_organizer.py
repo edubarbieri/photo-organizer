@@ -148,9 +148,9 @@ def update_config_with_args(args):
 def main():
     args = arg_parsers()
     if args.version:
-        print('photo organizer version 1.0.0')
+        print('photo organizer version 1.0.2')
         return
-    logging.info("Starting photo organizer V: 1.0.0")
+    logging.info("Starting photo organizer V: 1.0.2")
     update_config_with_args(args)
     for root, _, files in os.walk(get_config('SOURCE_FOLDER')):
         for file in files:
