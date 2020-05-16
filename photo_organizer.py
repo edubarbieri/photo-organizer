@@ -1,11 +1,19 @@
+
 import os
-from datetime import datetime
 import time
 import platform
-from PIL import Image
-import shutil
-from util import safe_name
 import pathlib
+import shutil
+import logging
+from PIL import Image
+from util import safe_name
+from datetime import datetime
+import argparse
+
+logging.basicConfig(
+    format='%(asctime)s :: %(levelname)s :: %(message)s',
+    datefmt='%d/%m/%Y %H:%M:%S',
+    level=logging.INFO)
 
 default_config = {
     'SOURCE_FOLDER': 'teste/source',
@@ -45,24 +53,27 @@ def img_date(image_path):
     tags = [(36867, 37521),  # (DateTimeOriginal, SubsecTimeOriginal)
             (36868, 37522),  # (DateTimeDigitized, SubsecTimeDigitized)
             (306, 37520), ]  # (DateTime, SubsecTime)
-    exif = Image.open(image_path)._getexif()
-    if not exif:
-        return datetime.fromtimestamp(creation_date(image_path))
+    with  Image.open(image_path) as img:
+        if not hasattr(img, '_getexif'):
+            return datetime.fromtimestamp(creation_date(image_path))
+        exif = Image.open(image_path)._getexif()
+        if not exif:
+            return datetime.fromtimestamp(creation_date(image_path))
+        for tag in tags:
+            dat = exif.get(tag[0])
+            sub = exif.get(tag[1], 0)
 
-    for tag in tags:
-        dat = exif.get(tag[0])
-        sub = exif.get(tag[1], 0)
+            # PIL.PILLOW_VERSION >= 3.0 returns a tuple
+            dat = dat[0] if type(dat) == tuple else dat
+            sub = sub[0] if type(sub) == tuple else sub
+            if dat != None:
+                break
 
-        # PIL.PILLOW_VERSION >= 3.0 returns a tuple
-        dat = dat[0] if type(dat) == tuple else dat
-        sub = sub[0] if type(sub) == tuple else sub
-        if dat != None:
-            break
-
-    if dat == None:
-        return datetime.fromtimestamp(creation_date(image_path))
-    full = '{}.{}'.format(dat, sub)
-    return datetime.strptime(full, std_fmt)
+        if dat == None:
+            return datetime.fromtimestamp(creation_date(image_path))
+        full = '{}.{}'.format(dat, sub)
+        return datetime.strptime(full.replace('\x00', '').strip(), std_fmt)
+        
 
 
 def destination_path(path):
@@ -70,7 +81,7 @@ def destination_path(path):
     if take_date is None:
         return None
 
-    format_folder = take_date.strftime(F"%Y{os.sep}%m{os.sep}%d")
+    format_folder = take_date.strftime(F"%Y{os.sep}%m")
     base_name = os.path.basename(path)
     dest_path = os.path.join(get_config(
         'DESTINATION_FOLDER'), format_folder, base_name)
@@ -82,25 +93,58 @@ def is_image(name):
     return ext in image_formats
 
 def process_image(image_path):
+    logging.info(f'processing file {image_path}')
     if not is_image(image_path):
         return
     new_path = destination_path(image_path)
     if not new_path:
-        print(f'Could not determine new path for image {image_path}')
+        logging.error(f'Could not determine new path for image {image_path}')
         return
     operation = get_config('OPERATION')
     os.makedirs(os.path.dirname(new_path), exist_ok=True)
     if operation == 'MOVE':
-        print(f'moving {image_path} to {new_path}...')
+        logging.info(f'moving {image_path} to {new_path}...')
         shutil.move(image_path, new_path)
     elif operation == 'COPY':
-        print(f'copying {image_path} to {new_path}...')
+        logging.info(f'copying {image_path} to {new_path}...')
         shutil.copy(image_path, new_path)
     else:
-        print(f'Please configure env OPERATION to perform operation...')
+        logging.error('Please configure env OPERATION to perform operation...')
 
 
-if __name__ == '__main__':
+def arg_parsers():
+    # Initiate the parser
+    parser = argparse.ArgumentParser(description='Photo organizer - script to organizer photo by take date.')
+    parser.add_argument("-V", "--version", help="show program version.", action="store_true")
+    parser.add_argument("-s", "--source", help="source folder with unorganized photos. SOURCE_FOLDER env replace this parameter.", required=False)
+    parser.add_argument("-d", "--destination", help="destination folder to move/copy photos by take date. DESTINATION_FOLDER env replace this parameter.", required=False)
+    parser.add_argument("-o", "--operation", help="move or copy photos to destionarion. OPERATION env replace this parameter.", choices=['COPY', 'MOVE'], default='COPY', required=False)
+    # Read arguments from the command line
+    return parser.parse_args()
+
+def update_config_with_args(args):
+    global default_config
+    if args.source:
+        default_config['SOURCE_FOLDER'] = args.source
+    if args.destination:
+        default_config['DESTINATION_FOLDER'] = args.destination
+    if args.operation == 'COPY':
+        default_config['OPERATION'] = 'COPY'
+    if args.operation == 'MOVE':
+        default_config['OPERATION'] = 'MOVE'
+
+
+def main():
+    args = arg_parsers()
+    if args.version:
+        print('photo organizer version 1.0.0')
+        return
+    logging.info("Starting photo organizer V: 1.0.0")
+    update_config_with_args(args)
     for root, _, files in os.walk(get_config('SOURCE_FOLDER')):
         for file in files:
             process_image(os.path.join(root, file))
+
+if __name__ == '__main__':
+    main()
+
