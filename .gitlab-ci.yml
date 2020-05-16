@@ -7,12 +7,12 @@ stages:
   - tests
   - build
 
-# python-tests:
-#   stage: tests
-#   image: python:3.8-buster
-#   script:
-#     - pip3 install -r requirements.txt
-#     - pytest
+python-tests:
+  stage: tests
+  image: python:3.8-buster
+  script:
+    - pip3 install -r requirements.txt
+    - pytest
 
 build-docker:
   stage: build

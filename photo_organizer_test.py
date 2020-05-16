@@ -1,7 +1,7 @@
 import os
 import pytest
 import datetime
-from photo_organizer import get_config, default_config, img_date, destination_path, is_image, process_image
+from photo_organizer import get_config, default_config, img_date, destination_path, is_image, process_image, fix_wrong_date
 import platform
 import shutil
 
@@ -24,7 +24,7 @@ def take_date_source_path(configs):
 
 @pytest.fixture
 def take_date_dest_path(configs):
-    return os.path.join(configs['DESTINATION_FOLDER'], '2020', '05', '10', 'take_date.jpg')
+    return os.path.join(configs['DESTINATION_FOLDER'], '2020', '05', 'take_date.jpg')
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def test_get_config_replace_by_os_env():
 
 
 def test_image_date_with_take_date():
-    dt_expect = datetime.datetime(2020, 5, 10, 23, 5, 40, 420000)
+    dt_expect = datetime.datetime(2020, 5, 10, 23, 5, 40)
     dt = img_date('./test_assets/source/take_date.jpg')
     assert dt == dt_expect
 
@@ -63,7 +63,7 @@ def test_destination_path_with_take_date(configs, take_date_dest_path):
 
 def test_destination_path_without_take_date(configs):
     expected_path = os.path.join(
-        configs['DESTINATION_FOLDER'], '2020', '05', '10', 'no_date.png')
+        configs['DESTINATION_FOLDER'], '2020', '05', 'no_date.png')
     new_path = destination_path('./test_assets/source/no_date.png')
     assert new_path == expected_path
 
@@ -99,5 +99,3 @@ def test_process_image_move_image(configs, take_date_source_path, take_date_dest
 
     shutil.move(take_date_dest_path, take_date_source_path)
     shutil.rmtree(os.path.join(configs['DESTINATION_FOLDER'], '2020'))
-
-

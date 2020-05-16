@@ -48,7 +48,7 @@ def creation_date(path_to_file):
 
 def img_date(image_path):
     """returns the image date from image (if available)\nfrom Orthallelous"""
-    std_fmt = '%Y:%m:%d %H:%M:%S.%f'
+    std_fmt = '%Y:%m:%d'
     # for subsecond prec, see doi.org/10.3189/2013JoG12J126 , sect. 2.2, 2.3
     tags = [(36867, 37521),  # (DateTimeOriginal, SubsecTimeOriginal)
             (36868, 37522),  # (DateTimeDigitized, SubsecTimeDigitized)
@@ -71,7 +71,7 @@ def img_date(image_path):
 
         if dat == None:
             return datetime.fromtimestamp(creation_date(image_path))
-        full = '{}.{}'.format(dat, sub)
+        full = dat.split(' ')[0]
         return datetime.strptime(full.replace('\x00', '').strip(), std_fmt)
         
 
