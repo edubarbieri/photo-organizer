@@ -31,6 +31,13 @@ def take_date_dest_path(configs):
 def file_not_image_source_path(configs):
     return os.path.join(configs['SOURCE_FOLDER'], 'text_file.txt')
 
+@pytest.fixture
+def error_image_source_path(configs):
+    return os.path.join(configs['SOURCE_FOLDER'], 'error.jpg')
+
+@pytest.fixture
+def error_image_dest_path(configs):
+    return os.path.join(configs['DESTINATION_FOLDER'], 'error', 'error.jpg')
 
 def test_get_config_default_value(configs):
     """Teste if return default configs values"""
@@ -97,3 +104,10 @@ def test_process_image_move_image(configs, take_date_source_path, take_date_dest
 
     shutil.move(take_date_dest_path, take_date_source_path)
     shutil.rmtree(os.path.join(configs['DESTINATION_FOLDER'], '2020'))
+
+
+def test_process_image_move_error(configs, error_image_source_path, error_image_dest_path):
+    process_image(error_image_source_path)
+    assert os.path.exists(error_image_dest_path) == True
+    shutil.move(error_image_dest_path, error_image_source_path)
+    shutil.rmtree(os.path.join(configs['DESTINATION_FOLDER'], 'error'))

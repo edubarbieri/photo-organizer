@@ -5,7 +5,7 @@ import platform
 import pathlib
 import shutil
 import logging
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from util import safe_name
 from datetime import datetime
 import argparse
@@ -90,27 +90,38 @@ def destination_path(path):
 
 def is_image(name):
     _, ext = os.path.splitext(name)
-    return ext in image_formats
+    return ext.lower() in image_formats
 
 def process_image(image_path):
     logging.info(f'processing file {image_path}')
     if not is_image(image_path):
         return
-    new_path = destination_path(image_path)
-    if not new_path:
-        logging.error(f'Could not determine new path for image {image_path}')
-        return
-    operation = get_config('OPERATION')
-    os.makedirs(os.path.dirname(new_path), exist_ok=True)
-    if operation == 'MOVE':
-        logging.info(f'moving {image_path} to {new_path}...')
-        shutil.move(image_path, new_path)
-    elif operation == 'COPY':
-        logging.info(f'copying {image_path} to {new_path}...')
-        shutil.copy(image_path, new_path)
+    try:
+        new_path = destination_path(image_path)
+    except UnidentifiedImageError as error:
+        logging.error(f'Could not open image {image_path}')
+        move_to_error(image_path)
     else:
-        logging.error('Please configure env OPERATION to perform operation...')
+        if not new_path:
+            logging.error(f'Could not determine new path for image {image_path}')
+            return
+        operation = get_config('OPERATION')
+        os.makedirs(os.path.dirname(new_path), exist_ok=True)
+        if operation == 'MOVE':
+            logging.info(f'moving {image_path} to {new_path}...')
+            shutil.move(image_path, new_path)
+        elif operation == 'COPY':
+            logging.info(f'copying {image_path} to {new_path}...')
+            shutil.copy(image_path, new_path)
+        else:
+            logging.error('Please configure env OPERATION to perform operation...')
 
+def move_to_error(image_path):
+    base_name = os.path.basename(image_path)
+    dest_path = os.path.join(get_config('DESTINATION_FOLDER'), 'error', base_name)
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    logging.info(f'moving {image_path} to ERROR {dest_path}...')
+    shutil.move(image_path, dest_path)
 
 def arg_parsers():
     # Initiate the parser
