@@ -8,6 +8,7 @@ stages:
   - build
 
 python-tests:
+  stage: tests
   image: python:3.8-buster
   script:
     - pip3 install -r requirements.txt
